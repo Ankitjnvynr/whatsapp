@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Messaging</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        input, textarea, button {
+            padding: 10px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        #response {
+            margin-top: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>WhatsApp Messaging</h1>
+    
+    <!-- Form to send text messages -->
+    <form id="textMessageForm">
+        <h2>Send Text Message</h2>
+        <label for="number">Phone Number (with country code):</label>
+        <input type="text" id="textNumber" placeholder="e.g., 1234567890" required />
+        
+        <label for="message">Message:</label>
+        <textarea id="textMessage" placeholder="Enter your message here..." required></textarea>
+        
+        <button type="submit">Send Text Message</button>
+    </form>
+
+    <hr>
+
+    <!-- Form to send media files -->
+    <form id="mediaForm" enctype="multipart/form-data">
+        <h2>Send Media File</h2>
+        <label for="number">Phone Number (with country code):</label>
+        <input type="text" id="mediaNumber" placeholder="e.g., 1234567890" required />
+        
+        <label for="caption">Caption (optional):</label>
+        <input type="text" id="mediaCaption" placeholder="Enter a caption for the media file" />
+        
+        <label for="mediaFile">Select Media File:</label>
+        <input type="file" id="mediaFile" accept="image/*,video/*" required />
+        
+        <button type="submit">Send Media File</button>
+    </form>
+
+    <p id="response"></p>
+
+    <script>
+        const textMessageForm = document.getElementById('textMessageForm');
+        const mediaForm = document.getElementById('mediaForm');
+        const responseElement = document.getElementById('response');
+
+        // Send text message
+        textMessageForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const number = document.getElementById('textNumber').value.trim();
+            const message = document.getElementById('textMessage').value.trim();
+
+            try {
+                const response = await fetch('/api/send-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ number, message }),
+                });
+
+                const data = await response.json();
+                responseElement.textContent = data.success
+                    ? 'Text message sent successfully!'
+                    : `Error: ${data.error}`;
+            } catch (error) {
+                console.error('Error sending text message:', error);
+                responseElement.textContent = 'Failed to send text message.';
+            }
+        });
+
+        // Send media file
+        mediaForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const number = document.getElementById('mediaNumber').value.trim();
+            const caption = document.getElementById('mediaCaption').value.trim();
+            const fileInput = document.getElementById('mediaFile').files[0];
+
+            const formData = new FormData();
+            formData.append('number', number);
+            formData.append('caption', caption);
+            formData.append('file', fileInput);
+
+            try {
+                const response = await fetch('/api/send-media', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const data = await response.json();
+                responseElement.textContent = data.success
+                    ? 'Media file sent successfully!'
+                    : `Error: ${data.error}`;
+            } catch (error) {
+                console.error('Error sending media file:', error);
+                responseElement.textContent = 'Failed to send media file.';
+            }
+        });
+    </script>
+</body>
+</html>
