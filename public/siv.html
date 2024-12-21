@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsApp Messaging</title>
+    <title>WhatsApp Bulk Messaging & Scheduling</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -26,86 +26,180 @@
             font-weight: bold;
             color: #333;
         }
+        #qrCode {
+            margin-top: 20px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
-    <h1>WhatsApp Messaging</h1>
-    
-    <!-- Form to send text messages -->
-    <form id="textMessageForm">
-        <h2>Send Text Message</h2>
-        <label for="number">Phone Number (with country code):</label>
-        <input type="text" id="textNumber" placeholder="e.g., 1234567890" required />
-        
-        <label for="message">Message:</label>
-        <textarea id="textMessage" placeholder="Enter your message here..." required></textarea>
-        
-        <button type="submit">Send Text Message</button>
+    <h1>WhatsApp Bulk Messaging & Scheduling</h1>
+
+    <div id="qrCode">
+        <h2>QR Code for WhatsApp Login</h2>
+        <img id="qrCodeImage" src="" alt="Scan QR Code to Login" style="max-width: 100%;" />
+    </div>
+   
+    <button id="generateQRButton">newqr</button>
+
+    <button id="logoutButton" style="margin-top: 20px; background-color: red; color: white; border: none; padding: 10px; cursor: pointer;">Logout</button>
+
+    <hr>
+
+    <!-- Bulk Messaging Form -->
+    <form id="bulkMessageForm">
+        <h2>Send Bulk Messages</h2>
+        <label for="bulkNumbers">Phone Numbers (comma-separated with country code):</label>
+        <textarea id="bulkNumbers" placeholder="e.g., 1234567890,2345678901" required></textarea>
+
+        <label for="bulkMessage">Message:</label>
+        <textarea id="bulkMessage" placeholder="Enter your message here..." required></textarea>
+
+        <button type="submit">Send Bulk Messages</button>
     </form>
 
     <hr>
 
-    <!-- Form to send media files -->
+    <!-- Message Scheduling Form -->
+    <form id="scheduleForm">
+        <h2>Schedule a Message</h2>
+        <label for="scheduleNumber">Phone Number (with country code):</label>
+        <input type="text" id="scheduleNumber" placeholder="e.g., 1234567890" required />
+
+        <label for="scheduleMessage">Message:</label>
+        <textarea id="scheduleMessage" placeholder="Enter your message here..." required></textarea>
+
+        <label for="scheduleTime">Scheduled Time (YYYY-MM-DD HH:mm:ss):</label>
+        <input type="datetime-local" id="scheduleTime" required />
+
+        <button type="submit">Schedule Message</button>
+    </form>
+
+    <hr>
+
+    <!-- Media File Messaging Form -->
     <form id="mediaForm" enctype="multipart/form-data">
         <h2>Send Media File</h2>
-        <label for="number">Phone Number (with country code):</label>
-        <input type="text" id="mediaNumber" placeholder="e.g., 1234567890" required />
-        
-        <label for="caption">Caption (optional):</label>
+        <label for="mediaNumber">Phone Numbers (comma-separated with country code):</label>
+        <textarea id="mediaNumber" placeholder="e.g., 1234567890,2345678901" required></textarea>
+
+        <label for="mediaCaption">Caption (optional):</label>
         <input type="text" id="mediaCaption" placeholder="Enter a caption for the media file" />
-        
+
         <label for="mediaFile">Select Media File:</label>
         <input type="file" id="mediaFile" accept="image/*,video/*" required />
-        
+
         <button type="submit">Send Media File</button>
     </form>
 
     <p id="response"></p>
 
     <script>
-        const textMessageForm = document.getElementById('textMessageForm');
-        const mediaForm = document.getElementById('mediaForm');
+        const qrCodeImage = document.getElementById('qrCodeImage');
+        const logoutButton = document.getElementById('logoutButton');
         const responseElement = document.getElementById('response');
 
-        // Send text message
-        textMessageForm.addEventListener('submit', async (event) => {
+        // Fetch QR Code
+        async function fetchQRCode() {
+            try {
+                const response = await fetch('/api/get-qr-code');
+                if (response.ok) {
+                    const data = await response.json();
+                    qrCodeImage.src = data.qrCode; // Assuming the backend sends a base64 QR code image
+                } else {
+                    qrCodeImage.alt = 'Failed to fetch QR code';
+                }
+            } catch (error) {
+                console.error('Error fetching QR code:', error);
+                qrCodeImage.alt = 'Failed to fetch QR code';
+            }
+        }
+
+        // Logout Handler
+        logoutButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/logout', { method: 'POST' });
+                if (response.ok) {
+                    alert('Logged out successfully');
+                    qrCodeImage.src = ''; // Clear QR Code Image
+                    qrCodeImage.alt = 'Scan QR Code to Login';
+                    responseElement.textContent = 'Session has been cleared successfully.';
+                    window.location.reload();
+                } else {
+                    alert('Failed to logout');
+                }
+            } catch (error) {
+                console.error('Error logging out:', error);
+            }
+        });
+
+        // Fetch QR Code on Page Load
+        fetchQRCode();
+
+        // Bulk Message Handler
+        document.getElementById('bulkMessageForm').addEventListener('submit', async (event) => {
             event.preventDefault();
 
-            const number = document.getElementById('textNumber').value.trim();
-            const message = document.getElementById('textMessage').value.trim();
+            const numbers = document.getElementById('bulkNumbers').value.trim();
+            const message = document.getElementById('bulkMessage').value.trim();
 
             try {
-                const response = await fetch('/api/send-message', {
+                const response = await fetch('/api/send-bulk-messages', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ number, message }),
+                    body: JSON.stringify({ numbers: numbers.split(','), message }),
                 });
 
                 const data = await response.json();
                 responseElement.textContent = data.success
-                    ? 'Text message sent successfully!'
+                    ? 'Bulk messages sent successfully!'
                     : `Error: ${data.error}`;
             } catch (error) {
-                console.error('Error sending text message:', error);
-                responseElement.textContent = 'Failed to send text message.';
+                console.error('Error sending bulk messages:', error);
+                responseElement.textContent = 'Failed to send bulk messages.';
             }
         });
 
-        // Send media file
-        mediaForm.addEventListener('submit', async (event) => {
+        // Schedule Message Handler
+        document.getElementById('scheduleForm').addEventListener('submit', async (event) => {
             event.preventDefault();
 
-            const number = document.getElementById('mediaNumber').value.trim();
+            const number = document.getElementById('scheduleNumber').value.trim();
+            const message = document.getElementById('scheduleMessage').value.trim();
+            const scheduledTime = document.getElementById('scheduleTime').value;
+
+            try {
+                const response = await fetch('/api/schedule-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ number, message, scheduledTime }),
+                });
+
+                const data = await response.json();
+                responseElement.textContent = data.success
+                    ? 'Message scheduled successfully!'
+                    : `Error: ${data.error}`;
+            } catch (error) {
+                console.error('Error scheduling message:', error);
+                responseElement.textContent = 'Failed to schedule message.';
+            }
+        });
+
+        // Send Media File Handler
+        document.getElementById('mediaForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const numbers = document.getElementById('mediaNumber').value.trim();
             const caption = document.getElementById('mediaCaption').value.trim();
             const fileInput = document.getElementById('mediaFile').files[0];
 
             const formData = new FormData();
-            formData.append('number', number);
+            formData.append('numbers', numbers);
             formData.append('caption', caption);
             formData.append('file', fileInput);
 
             try {
-                const response = await fetch('/api/send-media', {
+                const response = await fetch('/api/send-bulk-media', {
                     method: 'POST',
                     body: formData,
                 });
@@ -119,6 +213,26 @@
                 responseElement.textContent = 'Failed to send media file.';
             }
         });
+
+
+        const generateQRButton = document.getElementById('generateQRButton');
+
+generateQRButton.addEventListener('click', async () => {
+    try {
+        const response = await fetch('/api/generate-new-qr', { method: 'POST' });
+        const data = await response.json();
+        if (data.success) {
+            alert('New QR code generated successfully!');
+            fetchQRCode(); // Refresh the QR code
+        } else {
+            alert('Failed to generate new QR code.');
+        }
+    } catch (error) {
+        console.error('Error generating new QR code:', error);
+        alert('Error generating new QR code.');
+    }
+});
+
     </script>
 </body>
 </html>
